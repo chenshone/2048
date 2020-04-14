@@ -1,0 +1,437 @@
+<!--
+ * @Description: 2048
+ * @Author: CHENSHONE
+ * @Date: 2019-09-24 16:31:26
+ * @LastEditors: CHENSHONE
+ * @LastEditTime: 2019-09-26 19:50:02
+ -->
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>2048</title>
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no">
+    <link rel="stylesheet" type="text/css" href="./css/demo.css">
+</head>
+
+<body>
+    <div id="wrap">
+        <div class="header">
+            <div class="title">
+                <span>2048</span>
+            </div>
+            <div class="scores">
+                <div class="nowScores">
+                    <span class="scoreTitle">SCORE</span>
+                    <span class="score">0</span>
+                </div>
+                <div class="bestScores">
+                    <span class="scoreTitle">BEST</span>
+                    <span class="score">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="playGame">
+            <span class="word">Play 2048 Game Online</span>
+            <div class="btnPlay">
+                <span>New Game</span>
+            </div>
+        </div>
+        <div class="board">
+            <!-- 棋盘格子 -->
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <div class="grid"></div>
+            <!-- 棋子 -->
+            <div id="p00" class="pieces"></div>
+            <div id="p01" class="pieces"></div>
+            <div id="p02" class="pieces"></div>
+            <div id="p03" class="pieces"></div>
+            <div id="p10" class="pieces"></div>
+            <div id="p11" class="pieces"></div>
+            <div id="p12" class="pieces"></div>
+            <div id="p13" class="pieces"></div>
+            <div id="p20" class="pieces"></div>
+            <div id="p21" class="pieces"></div>
+            <div id="p22" class="pieces"></div>
+            <div id="p23" class="pieces"></div>
+            <div id="p30" class="pieces"></div>
+            <div id="p31" class="pieces"></div>
+            <div id="p32" class="pieces"></div>
+            <div id="p33" class="pieces"></div>
+        </div>
+        <div class="gameEnd" style="display: none">
+            <div class="content">
+                <span>Game Over!</span>
+                <div class="btn">
+                    <div class="buttonFunction">Try again</div>
+                    <div class="buttonFunction">Tweet</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+
+    <script>
+        window.onload = function () {
+            (function () {
+                var styleNode = document.createElement("style")
+                var w = document.documentElement.clientWidth / 16
+                styleNode.innerHTML = "html{font-size:" + w + "px!important}"
+                document.head.appendChild(styleNode)
+            })()
+            let container = document.querySelector("#wrap .board") // 手指滑动区域
+            let gameOver = document.querySelector("#wrap .gameEnd")
+            let playBtn = document.querySelector("#wrap .playGame .btnPlay")
+            let pieceSets = document.querySelectorAll('#wrap .board .pieces')
+            let nowScores = document.querySelector('#wrap .header .scores .nowScores .score')
+            let bestScores = document.querySelector('#wrap .header .scores .bestScores .score')
+            let againBtns = document.querySelectorAll('#wrap .gameEnd .content .btn .buttonFunction')
+            let data = [ // 棋盘初始化
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0],
+                [0, 0, 0, 0]
+            ]
+            let emptyGrids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] //空格子
+            let isOver // 是否结束
+            let moveFun = {
+                isMoving: false,
+                "left": moveLift,
+                "right": moveRight,
+                "up": moveUp,
+                "down": moveDown,
+                "refresh": refresh
+            } //移动后计算的函数封装
+            let nowScoresTxt = 0
+            let bestScoresTxt = 0
+            bestScores.innerHTML = bestScoresTxt
+            // 点击开始按钮 开始游戏
+            playBtn.onclick = function () {
+                playGame()
+            }
+
+            againBtns[0].onclick = function () {
+                againGame(isOver)
+            }
+
+            function playGame() {
+                nowScoresTxt = 0
+                nowScores.innerHTML = 0
+                initialize()
+                container.removeEventListener('touchstart', touchEvent.touchstart)
+                container.removeEventListener('touchmove', touchEvent.touchmove)
+                container.removeEventListener('touchend', direction)
+                // 开局随机一个空格子出现数字
+                randomPieces(data, emptyGrids, true)
+                // 手势操作
+                container.addEventListener('touchstart', touchEvent.touchstart)
+                container.addEventListener('touchmove', touchEvent.touchmove)
+                container.addEventListener('touchend', direction)
+
+            }
+
+            // 初始化棋盘
+            function initialize() {
+                data = [ // 棋盘初始化
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0],
+                    [0, 0, 0, 0]
+                ]
+                emptyGrids = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15] //空格子
+                for (let i = 0; i < pieceSets.length; i++) {
+                    pieceSets[i].className = "pieces"
+                    pieceSets[i].innerHTML = ""
+                }
+            }
+            // 手势方向
+            function direction() {
+                let direction = touchEvent.touchend()
+                if (direction) {
+                    let result = moveFun[direction]()
+                    moveFun.refresh(result)
+                }
+
+            }
+
+            // 棋盘移动后计算函数
+            function moveLift() {
+                let num0 = 0
+                let copyBoard = []
+                emptyGrids = []
+
+                for (let i = 0; i < 4; i++) {
+                    let newLine = []
+                    let oldLine = data[i]
+                    for (let j = 0; j < 4; j++) {
+                        if (oldLine[j] !== 0)
+                            newLine.push(oldLine[j])
+                    }
+                    // 向左合并相邻的相同棋子
+                    if (newLine.length > 1) {
+                        for (let j = 0; j < newLine.length - 1; j++) {
+                            if (newLine[j] == newLine[j + 1]) {
+                                nowScoresTxt += newLine[j]
+                                newLine[j] *= 2
+                                newLine[j + 1] = 0
+                                j++
+                            }
+                        }
+                        newLine = newLine.filter(item => item !== 0)
+                    }
+
+                    // 补全该行尾部的0
+                    for (let j = newLine.length; j < 4; j++) {
+                        emptyGrids.push(i * 4 + j)
+                        newLine.push(0)
+                        num0++
+                    }
+                    copyBoard[i] = newLine
+                }
+                if (num0 == 0) return -1
+                let ans = JSON.parse(JSON.stringify(copyBoard))
+                return ans
+            }
+
+            function moveRight() {
+                let num0 = 0
+                let copyBoard = []
+                emptyGrids = []
+
+                for (let i = 0; i < 4; i++) {
+                    let newLine = []
+                    let oldLine = data[i]
+                    for (let j = 0; j < 4; j++) {
+                        if (oldLine[j] !== 0)
+                            newLine.push(oldLine[j])
+                    }
+                    // 向右合并相邻的相同棋子
+                    if (newLine.length > 1) {
+                        for (let j = newLine.length - 1; j > 0; j--) {
+                            if (newLine[j] == newLine[j - 1]) {
+                                nowScoresTxt += newLine[j]
+                                newLine[j] *= 2
+                                newLine[j - 1] = 0
+                                j--
+                            }
+                        }
+                        newLine = newLine.filter(item => item !== 0)
+                    }
+                    // 补全该行头部的0
+                    let len = newLine.length
+                    for (let j = 0; j < 4 - len; j++) {
+                        emptyGrids.push(i * 4 + j)
+                        newLine.unshift(0)
+                        num0++
+                    }
+                    copyBoard[i] = newLine
+                }
+                if (num0 == 0) return -1
+                let ans = JSON.parse(JSON.stringify(copyBoard))
+                return ans
+            }
+
+            function moveUp() {
+                let num0 = 0
+                let copyBoard = []
+                emptyGrids = []
+                let board90 = [
+                    [],
+                    [],
+                    [],
+                    []
+                ]
+                for (let j = 0; j < 4; j++) {
+                    for (let i = 0; i < 4; i++) {
+                        board90[j].push(data[i][j])
+                    }
+                }
+                for (let i = 0; i < 4; i++) {
+                    let newCol = []
+                    let oldCol = board90[i]
+                    for (let j = 0; j < 4; j++) {
+                        if (oldCol[j] !== 0)
+                            newCol.push(oldCol[j])
+                    }
+                    // 向上合并相邻的相同棋子
+                    if (newCol.length > 1) {
+                        for (let j = 0; j < newCol.length - 1; j++) {
+                            if (newCol[j] == newCol[j + 1]) {
+                                nowScoresTxt += newCol[j]
+                                newCol[j] *= 2
+                                newCol[j + 1] = 0
+                                j++
+                            }
+                        }
+                        newCol = newCol.filter(item => item !== 0)
+                    }
+                    // 补全该列尾部的0
+                    for (let j = newCol.length; j < 4; j++) {
+                        emptyGrids.push(j * 4 + i)
+                        newCol.push(0)
+                        num0++
+                    }
+                    copyBoard[i] = newCol
+                }
+                if (num0 == 0) return -1
+                // 切换回正确的行列
+                for (let j = 0; j < 4; j++) {
+                    for (let i = 0; i < 4; i++) {
+                        board90[j][i] = copyBoard[i][j]
+                    }
+                }
+
+                let ans = JSON.parse(JSON.stringify(board90))
+                return ans
+            }
+
+            function moveDown() {
+                let num0 = 0
+                let copyBoard = []
+                emptyGrids = []
+                let board90 = [
+                    [],
+                    [],
+                    [],
+                    []
+                ]
+                for (let j = 0; j < 4; j++) {
+                    for (let i = 0; i < 4; i++) {
+                        board90[j].push(data[i][j])
+                    }
+                }
+                for (let i = 0; i < 4; i++) {
+                    let newCol = []
+                    let oldCol = board90[i]
+                    for (let j = 0; j < 4; j++) {
+                        if (oldCol[j] !== 0)
+                            newCol.push(oldCol[j])
+                    }
+                    // 向下合并相邻的相同棋子
+                    if (newCol.length > 1) {
+                        for (let j = newCol.length - 1; j > 0; j--) {
+                            if (newCol[j] == newCol[j - 1]) {
+                                nowScoresTxt += newCol[j]
+                                newCol[j] *= 2
+                                newCol[j - 1] = 0
+                                j--
+                            }
+                        }
+                        newCol = newCol.filter(item => item !== 0)
+                    }
+                    // 补全该列头部的0
+                    const len = newCol.length
+                    for (let j = 0; j < 4 - len; j++) {
+                        emptyGrids.push(j * 4 + i)
+                        newCol.unshift(0)
+                        num0++
+                    }
+                    copyBoard[i] = newCol
+                }
+                if (num0 == 0) return -1
+                // 切换回正确的行列
+                for (let j = 0; j < 4; j++) {
+                    for (let i = 0; i < 4; i++) {
+                        board90[j][i] = copyBoard[i][j]
+                    }
+                }
+
+                let ans = JSON.parse(JSON.stringify(board90))
+                return ans
+            }
+
+            function refresh(result) {
+                console.log(result)
+                if (result == -1) return -1
+                let newBoard = result
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+
+                        if (data[i][j] !== 0) {
+                            updateBoard(i, j, "")
+                        }
+
+                    }
+                }
+                data = newBoard
+                randomPieces(data, emptyGrids, false)
+                for (let i = 0; i < 4; i++) {
+                    for (let j = 0; j < 4; j++) {
+
+                        if (data[i][j] !== 0) {
+                            updateBoard(i, j, data[i][j])
+                        }
+
+                    }
+                }
+                updateScore()
+                isOver = isGameOver()
+                if (isOver) {
+                    gameOver.style = "display:block;"
+                }
+            }
+
+            // 更新分数
+            function updateScore() {
+                nowScores.innerHTML = nowScoresTxt
+                if (nowScoresTxt > bestScoresTxt) {
+                    bestScoresTxt = nowScoresTxt
+                    bestScores.innerHTML = bestScoresTxt
+                }
+            }
+
+            // 是否结束游戏
+            function isGameOver() {
+                if (data[0].indexOf(2048) != -1||data[1].indexOf(2048) != -1||data[2].indexOf(2048) != -1||data[3].indexOf(2048) != -1)
+                    return true
+                if (emptyGrids.length > 0) return false
+                if (emptyGrids.length == 0) {
+                    for (let i = 0; i < 4; i++) {
+                        for (let j = 0; j < 4; j++) {
+                            if (j < 3)
+                                if (data[i][j] == data[i][j + 1]) {
+                                    return false
+                                }
+                            if (i < 3)
+                                if (data[i][j] == data[i + 1][j]) {
+                                    return false
+                                }
+                        }
+                    }
+                }
+                return true
+            }
+
+            // againGame
+            function againGame(isOver) {
+                isOver = !isOver
+                gameOver.style = "display:none;"
+                playGame()
+            }
+        }
+    </script>
+
+</body>
+<script type="text/javascript" src="./js/touch.js"></script>
+<script type="text/javascript" src="js/methods.js"></script>
+
+</html>
