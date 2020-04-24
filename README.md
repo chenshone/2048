@@ -9,3 +9,4 @@
 
 根据文档写一个纯原生的demo
 
+[在线演示(移动端)](https://chenshone.github.io/2048)
